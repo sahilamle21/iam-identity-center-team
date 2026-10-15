@@ -4,30 +4,35 @@ Reads eligibility.yaml and approvers.yaml, resolves IDC group IDs and permission
 then upserts the resulting policies into TEAM's DynamoDB tables.
 
 For approver policies, explicit entries in approvers.yaml are written first.
-If GITHUB_TOKEN is set, OU auto-detection runs on top (reads admin_team_name org tags
+If GitHub credentials are set, OU auto-detection runs on top (reads admin_team_name org tags
 + team-resource-mapping.yaml to set per-OU approvers for production rollout).
 
 Env vars required: ELIGIBILITY_TABLE, APPROVER_TABLE, IDENTITY_STORE_ID
-Optional: AWS_REGION, FALLBACK_GROUP_NAME, DRY_RUN, GITHUB_TOKEN, PRODUCTION_OU_IDS
+Optional: AWS_REGION, FALLBACK_GROUP_NAME, DRY_RUN, PRODUCTION_OU_IDS
+GitHub access to flexera/team-resource-mapping (Contents: read), either:
+  GITHUB_TOKEN, or GitHub App GITHUB_APP_ID + GITHUB_APP_INSTALLATION_ID +
+  GITHUB_APP_PRIVATE_KEY_FILE (path to the .pem, keep it outside the repo).
 
 Run with credentials for the account that owns the TEAM DynamoDB tables and can read
-Organizations / Identity Store / SSO Admin. GITHUB_TOKEN must have read access to
-flexera/team-resource-mapping (Contents: read).
+Organizations / Identity Store / SSO Admin.
 
-    pip install -r scripts/requirements.txt
+    python -m pip install -r scripts/requirements.txt
     DRY_RUN=true ELIGIBILITY_TABLE=Eligibility-<apiId>-<env> APPROVER_TABLE=Approvers-<apiId>-<env> \
-      IDENTITY_STORE_ID=d-xxxxxxxxxx GITHUB_TOKEN=... python scripts/sync_team_policies.py
+      IDENTITY_STORE_ID=d-xxxxxxxxxx GITHUB_APP_ID=... GITHUB_APP_INSTALLATION_ID=... \
+      GITHUB_APP_PRIVATE_KEY_FILE=/path/outside/repo/key.pem python scripts/sync_team_policies.py
 """
 
 import json
 import os
 import sys
+import time
 import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
 import boto3
+import jwt
 import requests
 import yaml
 from botocore.exceptions import ClientError
@@ -156,9 +161,33 @@ def sync_explicit_approver_policies() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def fetch_team_resource_mapping() -> dict:
+def get_github_token() -> str:
+    # GITHUB_TOKEN wins; otherwise mint a repo-scoped, read-only installation token from the
+    # GitHub App. The private key is read from a file path, never from the repo or logs.
+    if GITHUB_TOKEN:
+        return GITHUB_TOKEN
+    app_id = os.environ.get("GITHUB_APP_ID")
+    installation_id = os.environ.get("GITHUB_APP_INSTALLATION_ID")
+    key_file = os.environ.get("GITHUB_APP_PRIVATE_KEY_FILE")
+    if not (app_id and installation_id and key_file):
+        return ""
+    with open(key_file) as f:
+        private_key = f.read()
+    now = int(time.time())
+    app_jwt = jwt.encode({"iat": now - 60, "exp": now + 540, "iss": app_id}, private_key, algorithm="RS256")
+    response = requests.post(
+        f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+        headers={"Authorization": f"Bearer {app_jwt}", "Accept": "application/vnd.github+json"},
+        json={"repositories": ["team-resource-mapping"], "permissions": {"contents": "read"}},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()["token"]
+
+
+def fetch_team_resource_mapping(token: str) -> dict:
     # Private repo — needs a GitHub token with read access to flexera/team-resource-mapping.
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    headers = {"Authorization": f"token {token}"}
     response = requests.get(TEAM_RESOURCE_MAPPING_URL, headers=headers, timeout=30)
     response.raise_for_status()
     raw = yaml.safe_load(response.text)
@@ -527,14 +556,15 @@ def main():
     eligibility_summary = sync_eligibility_policies()
 
     approver_summary = {"ous_processed": 0, "approver_policies_written": 0, "skipped": 0}
-    if GITHUB_TOKEN:
+    github_token = get_github_token()
+    if github_token:
         log.info("--- Syncing OU auto-detection approver policies (team-resource-mapping) ---")
         log.info("Fetching team-resource-mapping.yaml from flexera/team-resource-mapping")
-        team_mapping = fetch_team_resource_mapping()
+        team_mapping = fetch_team_resource_mapping(github_token)
         log.info("Loaded %d teams from team-resource-mapping.yaml", len(team_mapping))
         approver_summary = sync_approver_policies(team_mapping)
     else:
-        log.info("GITHUB_TOKEN not set — skipping OU auto-detection (explicit approvers.yaml entries only)")
+        log.info("No GitHub credentials set — skipping OU auto-detection (explicit approvers.yaml entries only)")
 
     summary = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
