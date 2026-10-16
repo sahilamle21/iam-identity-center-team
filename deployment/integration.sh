@@ -25,7 +25,7 @@ fi
 
 green='\033[0;32m'
 clear='\033[0m'
-cognitoUserpoolId=`aws cognito-idp list-user-pools --region $REGION --max-results 10 --output json | jq -r '.UserPools[] | select(.Name | contains("team06dbb7fc")) | .Id'`
+cognitoUserpoolId=`aws cognito-idp list-user-pools --region $REGION --max-results 20 --output json | jq -r --arg env "${BRANCH_NAME:-main}" '.UserPools[] | select(.Name | contains("team06dbb7fc") and endswith("-" + $env)) | .Id'`
 cognitouserpoolhostedUIdomain=`aws cognito-idp describe-user-pool --region $REGION --user-pool-id $cognitoUserpoolId --output json | jq -r '.UserPool.Domain'`
 cognitoClientWebClientID=`aws cognito-idp list-user-pool-clients --region $REGION --user-pool-id $cognitoUserpoolId --output json | jq -r '.UserPoolClients[] | select(.ClientName | contains("clientWeb")) | .ClientId'`
 cognitoHostedUIdomain=$cognitouserpoolhostedUIdomain.auth.$REGION.amazoncognito.com
