@@ -6,14 +6,12 @@ import { React, useState } from "react";
 import Box from "@awsui/components-react/box";
 import { useHistory } from "react-router-dom";
 import Button from "@awsui/components-react/button";
-import ColumnLayout from "@awsui/components-react/column-layout";
 import Container from "@awsui/components-react/container";
 import FormField from "@awsui/components-react/form-field";
 import Grid from "@awsui/components-react/grid";
 import SpaceBetween from "@awsui/components-react/space-between";
 // import Link from "@awsui/components-react/link";
 import Select from "@awsui/components-react/select";
-import team from "../../media/team.png";
 import "../../media/landing-page.css";
 
 const selections = [
@@ -113,122 +111,6 @@ function Landing(props) {
         </Box>
       </div>
 
-      <Box padding={{ top: "xxxl", horizontal: "s" }}>
-        <Grid
-          gridDefinition={[
-            {
-              colspan: { xl: 6, l: 5, s: 6, xxs: 10 },
-              // offset: { l: 2, xxs: 1 },
-            },
-            {
-              colspan: { xl: 2, l: 3, s: 4, xxs: 10 },
-              // offset: { s: 0, xxs: 1 },
-            },
-          ]}
-        >
-          <SpaceBetween size="xxl">
-            <div>
-              <Box
-                variant="h1"
-                tagOverride="h2"
-                padding={{ bottom: "s", top: "n" }}
-              >
-                How it works
-              </Box>
-              <Container className="picbox">
-                <div>
-                  <img src={team} alt="team" className="pic" />
-                </div>
-              </Container>
-            </div>
-
-            <div>
-              <Box
-                variant="h1"
-                tagOverride="h2"
-                padding={{ bottom: "s", top: "n" }}
-              >
-                Benefits and features
-              </Box>
-              <Container>
-                <ColumnLayout columns={2} variant="text-grid">
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Management console
-                    </Box>
-                    <Box variant="p">
-                      Create, approve, monitor, and manage your TEAM request with
-                      a few simple clicks on the management console.
-                    </Box>
-                  </div>
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Auditing
-                    </Box>
-                    <Box variant="p">
-                      Session logs auditing enabling easy correlation of request
-                      justification with session activity
-                    </Box>
-                  </div>
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Reporting
-                    </Box>
-                    <Box variant="p">
-                      Centralised reporting of request and approval information
-                    </Box>
-                  </div>
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Enhanced security
-                    </Box>
-                    <Box variant="p">
-                      Application single-sign-on with Cognito SAML integration
-                      and group based authorization
-                    </Box>
-                  </div>
-                </ColumnLayout>
-              </Container>
-            </div>
-            {/* <div>
-              <Box
-                variant="h1"
-                tagOverride="h2"
-                padding={{ bottom: "s", top: "n" }}
-              >
-                Use cases
-              </Box>
-              <Container>
-                <ColumnLayout columns={2} variant="text-grid">
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Configure multiple origins
-                    </Box>
-                    <Box variant="p">
-                      Configure multiple origin servers and multiple cache
-                      behaviors based on URL path patterns on your website. Use
-                      AWS origins such as Amazon S3 or Elastic Load Balancing,
-                      and add your own custom origins to the mix.
-                    </Box>
-                    <Link href="#">Learn more</Link>
-                  </div>
-                  <div>
-                    <Box variant="h3" padding={{ top: "n" }}>
-                      Deliver streaming video
-                    </Box>
-                    <Box variant="p">
-                      Use CloudFront to deliver on-demand video without the need
-                      to set up or operate any media servers. CloudFront
-                      supports multiple protocols for media streaming.
-                    </Box>
-                    <Link href="#">Learn more</Link>
-                  </div>
-                </ColumnLayout>
-              </Container>
-            </div> */}
-          </SpaceBetween>
-        </Grid>
-      </Box>
     </Box>
   );
 }

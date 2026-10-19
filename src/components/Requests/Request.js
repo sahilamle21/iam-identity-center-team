@@ -35,7 +35,7 @@ function Request(props) {
 
   const [item, setItem] = useState([]);
 
-  const [duration, setDuration] = useState("");
+  const [duration, setDuration] = useState("1");
   const [durationError, setDurationError] = useState("");
 
   const [justification, setJustification] = useState("");
@@ -93,7 +93,7 @@ function Request(props) {
   }
 
   async function getDuration(accountId) {
-    setDuration("");
+    setDuration("1");
     const duration = item.map((data) => {
       data.accounts.map((account, index) => {
         if (account.id == accountId) {
@@ -488,7 +488,7 @@ function Request(props) {
             <FormField
               label="Duration"
               stretch
-              description="Number of hours for which elevated access is required - Note: This is different from the session duration configured for requested permission set/role"
+              description="Number of hours for which elevated access is required - Note: Max can be 9 hours."
               errorText={durationError}
               placeholder={`Enter number between 1-${maxDuration}`}
             >
@@ -506,9 +506,9 @@ function Request(props) {
               />
             </FormField>
             <FormField
-              label="Ticket no"
+              label="Jira ticket no"
               stretch
-              description="Elevated request ticket system number"
+              description="Elevated request ticket Jira number"
               errorText={ticketError}
             >
               <Input
