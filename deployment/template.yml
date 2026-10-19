@@ -51,7 +51,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt 'TriggerBuildLambda.Arn'
       appId: !GetAtt AmplifyApp.AppId
-      branchName: main
+      branchName: indapprove
       branch: !GetAtt AmplifyBranch.Arn
 
   AmplifyRoleV2:
@@ -152,7 +152,7 @@ Resources:
   AmplifyBranch:
     Type: AWS::Amplify::Branch
     Properties:
-      BranchName: main
+      BranchName: indapprove
       AppId: !GetAtt AmplifyApp.AppId
       EnableAutoBuild: true
       EnvironmentVariables: 
@@ -179,7 +179,7 @@ Resources:
           Value: amplify:al2023
       Tags:
         - Key: Branch
-          Value: main
+          Value: indapprove
   
   TriggerBuildLambda:
     Type: AWS::Lambda::Function
