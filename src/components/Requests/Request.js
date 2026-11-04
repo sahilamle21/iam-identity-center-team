@@ -300,6 +300,9 @@ function Request(props) {
     if (!time) {
       setTimeError("Select start date");
       error = true;
+    } else if (moment(time).isBefore(moment().subtract(5, "minutes"))) {
+      setTimeError("Start time cannot be in the past");
+      error = true;
     }
     if (!justification || !/[\p{L}\p{N}]/u.test(justification[0])) {
       setJustificationError("Enter valid business justification");
@@ -489,7 +492,19 @@ function Request(props) {
                 showTime
                 format="YYYY-MM-DD HH:mm"
                 defaultValue={moment()}
-                // disabledDate={disabledDate}
+                disabledDate={(d) => d && d.isBefore(moment(), "day")}
+                disabledTime={(d) => {
+                  if (!d || !d.isSame(moment(), "day")) return {};
+                  const now = moment();
+                  return {
+                    disabledHours: () =>
+                      Array.from({ length: now.hour() }, (_, i) => i),
+                    disabledMinutes: (h) =>
+                      h === now.hour()
+                        ? Array.from({ length: now.minute() }, (_, i) => i)
+                        : [],
+                  };
+                }}
                 onChange={(event) => {
                   setTimeError();
                   if (event) {
