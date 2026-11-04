@@ -30,13 +30,22 @@ import { API, graphqlOperation } from "aws-amplify";
 import { onPublishPolicy } from "../../graphql/subscriptions";
 import params from "../../parameters.json";
 
+// Month is approximated as 30 days.
+const DURATION_UNITS = [
+  { label: "Hours", value: "hours", hours: 1 },
+  { label: "Days", value: "days", hours: 24 },
+  { label: "Months (30 days)", value: "months", hours: 720 },
+];
+
 function Request(props) {
   const [email, setEmail] = useState("");
 
   const [item, setItem] = useState([]);
 
   const [duration, setDuration] = useState("1");
+  const [durationUnit, setDurationUnit] = useState(DURATION_UNITS[0]);
   const [durationError, setDurationError] = useState("");
+  const durationHours = Number(duration) * durationUnit.hours;
 
   const [justification, setJustification] = useState("");
   const [justificationError, setJustificationError] = useState("");
@@ -64,6 +73,8 @@ function Request(props) {
   const [mgmtPs, setMgmtPs] = useState([]);
 
   const [maxDuration, setMaxDuration] = useState(9);
+  const unitMax = (unit) => Math.floor(Number(maxDuration) / unit.hours);
+  const maxInUnit = unitMax(durationUnit);
   const [ticketRequired, setTicketRequired] = useState(true);
   const [approvalRequired, setApprovalRequired] = useState(true);
 
@@ -94,6 +105,7 @@ function Request(props) {
 
   async function getDuration(accountId) {
     setDuration("1");
+    setDurationUnit(DURATION_UNITS[0]);
     const duration = item.map((data) => {
       data.accounts.map((account, index) => {
         if (account.id == accountId) {
@@ -181,7 +193,7 @@ function Request(props) {
       accountName: account.label,
       role: role.label,
       roleId: role.value,
-      duration: duration,
+      duration: String(durationHours),
       startTime: time,
       justification: justification,
       ticketNo: ticketNo,
@@ -258,11 +270,13 @@ function Request(props) {
     let error = false;
     if (
       !duration ||
-      isNaN(duration) ||
-      Number(duration) > Number(maxDuration) ||
+      !Number.isInteger(Number(duration)) ||
+      Number(duration) > maxInUnit ||
       Number(duration) < 1
     ) {
-      setDurationError(`Enter number between 1-${maxDuration}`);
+      setDurationError(
+        `Enter a whole number between 1 and ${maxInUnit} ${durationUnit.value}`
+      );
       error = true;
     }
     if (role.length < 1) {
@@ -488,22 +502,41 @@ function Request(props) {
             <FormField
               label="Duration"
               stretch
-              description="Number of hours for which elevated access is required - Note: Max can be 9 hours."
+              description={`Duration for which elevated access is required - Note: Max is ${maxDuration} hours (${maxInUnit} ${durationUnit.value} selected).`}
               errorText={durationError}
-              placeholder={`Enter number between 1-${maxDuration}`}
             >
-              <Input
-                value={duration}
-                onChange={(event) => {
-                  setDurationError();
-                  Number(event.detail.value) > Number(maxDuration)
-                    ? setDurationError(
-                        `Enter a number between 1 and ${maxDuration}`
-                      )
-                    : setDuration(event.detail.value);
-                }}
-                type="number"
-              />
+              <SpaceBetween direction="horizontal" size="xs">
+                <Input
+                  value={duration}
+                  placeholder={`1-${maxInUnit}`}
+                  onChange={(event) => {
+                    setDurationError();
+                    Number(event.detail.value) > maxInUnit
+                      ? setDurationError(
+                          `Enter a number between 1 and ${maxInUnit} ${durationUnit.value}`
+                        )
+                      : setDuration(event.detail.value);
+                  }}
+                  type="number"
+                />
+                <Select
+                  options={DURATION_UNITS.map((unit) => ({
+                    ...unit,
+                    description: `Up to ${unitMax(unit)}`,
+                    disabled: unitMax(unit) < 1,
+                  }))}
+                  selectedOption={durationUnit}
+                  onChange={(event) => {
+                    const unit = event.detail.selectedOption;
+                    setDurationError();
+                    setDurationUnit(unit);
+                    if (Number(duration) > unitMax(unit)) {
+                      setDuration(String(unitMax(unit)));
+                    }
+                  }}
+                  selectedAriaLabel="selected"
+                />
+              </SpaceBetween>
             </FormField>
             <FormField
               label="Jira ticket no"
